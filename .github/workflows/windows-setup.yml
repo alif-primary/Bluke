@@ -1,0 +1,36 @@
+name: Windows setup
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - '.github/workflows/windows-setup.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  fresh-sdk:
+    name: Clean-machine setup + build
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Show environment
+        shell: pwsh
+        run: |
+          $PSVersionTable | Out-String | Write-Host
+          Write-Host "JAVA_HOME=$env:JAVA_HOME"
+          (Get-Command java -ErrorAction SilentlyContinue).Source
+          java -version 2>&1 | Write-Host
+
+      - name: Run setup.ps1 against an empty SDK root
+        shell: pwsh
+        run: .\scripts\setup.ps1 -SdkRoot "$env:RUNNER_TEMP\AndroidSdk" -NoBuild
+
+      - name: Build with the freshly installed SDK
+        shell: pwsh
+        run: .\scripts\build.ps1
