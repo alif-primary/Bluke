@@ -68,8 +68,9 @@ Usage and troubleshooting: [docs/USAGE.md](docs/USAGE.md).
 Windows:
 
 ```powershell
-.\scripts\setup.ps1              # installs JDK 17 + Android SDK, then builds
-.\scripts\build.ps1 -Install     # rebuild + install over USB
+.\setup.cmd                    # installs JDK 17 + Android SDK, then builds
+.\build.cmd                    # rebuild
+.\scripts\build.ps1 -Install   # rebuild + install over USB
 ```
 
 Linux / macOS:

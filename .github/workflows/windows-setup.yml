@@ -27,10 +27,10 @@ jobs:
           (Get-Command java -ErrorAction SilentlyContinue).Source
           java -version 2>&1 | Write-Host
 
-      - name: Run setup.ps1 against an empty SDK root
-        shell: pwsh
+      - name: Run setup.ps1 against an empty SDK root (Windows PowerShell 5.1)
+        shell: powershell
         run: .\scripts\setup.ps1 -SdkRoot "$env:RUNNER_TEMP\AndroidSdk" -NoBuild
 
-      - name: Build with the freshly installed SDK
-        shell: pwsh
+      - name: Build with the freshly installed SDK (Windows PowerShell 5.1)
+        shell: powershell
         run: .\scripts\build.ps1

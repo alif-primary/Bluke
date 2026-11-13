@@ -27,56 +27,87 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$script:StepName = 'start'
+
+function Step([string]$text) {
+    $script:StepName = $text
+    Write-Host ''
+    Write-Host "==> $text" -ForegroundColor Cyan
+}
+function Info([string]$text) { Write-Host "    $text" -ForegroundColor DarkGray }
+
+function Invoke-Native {
+    <# Native tools write to stderr; merging that under EAP=Stop throws
+       NativeCommandError, so relax the preference for the call itself. #>
+    param([Parameter(Mandatory)][string]$FilePath, [string[]]$ArgumentList = @())
+    $old = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $FilePath @ArgumentList
+        return $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $old
+    }
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 
-$hasLocalProps = Test-Path (Join-Path $repoRoot 'local.properties')
-if (-not $hasLocalProps -and -not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
-    throw "Android SDK not configured. Run .\scripts\setup.ps1 once (or set ANDROID_HOME)."
-}
-
-if ($Keystore) {
-    $resolved = (Resolve-Path $Keystore -ErrorAction Stop).Path
-    $env:KEYSTORE_PATH = $resolved
-    $env:KEY_ALIAS = $KeyAlias
-    if ($StorePassword) { $env:STORE_PASSWORD = $StorePassword }
-    if ($KeyPassword) { $env:KEY_PASSWORD = $KeyPassword }
-    if (-not $StorePassword) {
-        $secure = Read-Host "Keystore password for $resolved" -AsSecureString
-        $env:STORE_PASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
-            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
-        $env:KEY_PASSWORD = $env:STORE_PASSWORD
-    }
-    $Release = $true
-}
-
-if ($Install) {
-    $task = 'installDebug'
-} elseif ($Release) {
-    $task = 'assembleRelease'
-} else {
-    $task = 'assembleDebug'
-}
-
-$gradlew = Join-Path $repoRoot 'gradlew.bat'
-Push-Location $repoRoot
 try {
-    $gradleArgs = @($task, '--console=plain')
-    if ($Device) { $gradleArgs += "-Pandroid.injected.device.serial=$Device" }
-    Write-Host "==> gradlew $($gradleArgs -join ' ')" -ForegroundColor Cyan
-    & $gradlew @gradleArgs
-    if ($LASTEXITCODE -ne 0) { throw "Gradle failed with exit code $LASTEXITCODE" }
-} finally {
-    Pop-Location
-}
+    Step 'Checking toolchain'
+    if (-not (Test-Path (Join-Path $repoRoot 'local.properties')) -and
+        -not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
+        throw 'Android SDK not configured. Run .\scripts\setup.ps1 once (or set ANDROID_HOME).'
+    }
+    Info "repo: $repoRoot"
 
-$variant = if ($Release) { 'release' } else { 'debug' }
-$outDir = Join-Path $repoRoot "app\build\outputs\apk\$variant"
-$apk = Get-ChildItem -Path $outDir -Filter *.apk -Recurse -ErrorAction SilentlyContinue |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($Keystore) {
+        $resolved = (Resolve-Path $Keystore -ErrorAction Stop).Path
+        $env:KEYSTORE_PATH = $resolved
+        $env:KEY_ALIAS = $KeyAlias
+        if (-not $StorePassword) {
+            $secure = Read-Host "Keystore password for $resolved" -AsSecureString
+            $StorePassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+                [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
+        }
+        $env:STORE_PASSWORD = $StorePassword
+        $env:KEY_PASSWORD = if ($KeyPassword) { $KeyPassword } else { $StorePassword }
+        $Release = $true
+        Info "signing with $resolved"
+    }
 
-if ($apk) {
-    Write-Host "`nAPK: $($apk.FullName)" -ForegroundColor Green
+    if ($Install) { $task = 'installDebug' }
+    elseif ($Release) { $task = 'assembleRelease' }
+    else { $task = 'assembleDebug' }
+
+    Step "gradlew $task"
+    $gradlew = Join-Path $repoRoot 'gradlew.bat'
+    if (-not (Test-Path $gradlew)) { throw "gradlew.bat missing at $gradlew" }
+
+    Push-Location $repoRoot
+    try {
+        $gradleArgs = @($task, '--console=plain')
+        if ($Device) { $gradleArgs += "-Pandroid.injected.device.serial=$Device" }
+        $code = Invoke-Native -FilePath $gradlew -ArgumentList $gradleArgs
+    } finally {
+        Pop-Location
+    }
+    if ($code -ne 0) { throw "Gradle failed with exit code $code" }
+
+    Step 'Locating APK'
+    $variant = if ($Release) { 'release' } else { 'debug' }
+    $outDir = Join-Path $repoRoot "app\build\outputs\apk\$variant"
+    $apk = Get-ChildItem -Path $outDir -Filter *.apk -Recurse -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+    if (-not $apk) { throw "No APK under $outDir" }
+
+    Write-Host ''
+    Write-Host "APK: $($apk.FullName)" -ForegroundColor Green
     Write-Host ("     {0:N1} MB" -f ($apk.Length / 1MB))
-} else {
-    Write-Warning "Build finished but no APK was found under $outDir"
+} catch {
+    Write-Host ''
+    Write-Host "Build failed during: $script:StepName" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    exit 1
 }

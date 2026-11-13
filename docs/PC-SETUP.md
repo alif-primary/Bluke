@@ -9,23 +9,30 @@ Android command-line tools into user space, accept the SDK licences, write
 ```powershell
 git clone https://github.com/alif-primary/Bluke.git
 cd Bluke
+.\setup.cmd
+```
+
+`setup.cmd` runs the setup script with the execution policy bypassed, so it also
+works by double-clicking it in Explorer. If you prefer PowerShell directly:
+
+```powershell
 .\scripts\setup.ps1
 ```
 
-That is it. The APK lands in `app\build\outputs\apk\debug\`.
-
-| Task | Command |
-| --- | --- |
-| Rebuild | `.\scripts\build.ps1` |
-| Install over USB | `.\scripts\build.ps1 -Install` |
-| Signed release | `.\scripts\build.ps1 -Release -Keystore C:\keys\my-upload-key.jks` |
-| Update the repo | `.\scripts\sync.ps1 "describe change"` |
-
-If PowerShell blocks the scripts:
+and if that is blocked by the execution policy:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
+
+The APK lands in `app\build\outputs\apk\debug\`.
+
+| Task | Command |
+| --- | --- |
+| Rebuild | `.\build.cmd` or `.\scripts\build.ps1` |
+| Install over USB | `.\scripts\build.ps1 -Install` |
+| Signed release | `.\scripts\build.ps1 -Release -Keystore C:\keys\my-upload-key.jks` |
+| Update the repo | `.\scripts\sync.ps1 "describe change"` |
 
 ## Linux (and macOS)
 
