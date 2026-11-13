@@ -1,102 +1,139 @@
-name: Build Android App
+name: Build APK
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
+    branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  lint:
+    name: Lint scripts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: PowerShell syntax
+        shell: pwsh
+        run: |
+          $bad = 0
+          Get-ChildItem scripts/*.ps1 | ForEach-Object {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              $_.FullName, [ref]$null, [ref]$errors)
+            if ($errors -and $errors.Count -gt 0) {
+              $errors | ForEach-Object {
+                Write-Host "::error file=$($_.Extent.File),line=$($_.Extent.StartLineNumber)::$($_.Message)"
+              }
+              $bad++
+            } else {
+              Write-Host "ok: $($_.Name)"
+            }
+          }
+          if ($bad -gt 0) { exit 1 }
+
+      - name: Shell syntax
+        run: |
+          set -e
+          for f in scripts/*.sh; do bash -n "$f" && echo "ok: $f"; done
+
   build:
-    name: Build & Test
+    name: Build APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
-          distribution: 'zulu'
+          distribution: zulu
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-
-      - name: Extract Version Name
-        id: get_version
-        run: |
-          VERSION=$(grep -oE "versionName\s*=\s*\"[^\"]+\"" app/build.gradle.kts | cut -d'"' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version extracted: $VERSION"
-
-      - name: Upload Debug APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bluke-debug-${{ steps.get_version.outputs.version }}
-          path: app/build/outputs/apk/debug/app-debug.apk
-
-  release:
-    name: Build & Publish Release
-    runs-on: ubuntu-latest
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Extract Version Name
-        id: get_version
-        run: |
-          VERSION=$(grep -oE "versionName\s*=\s*\"[^\"]+\"" app/build.gradle.kts | cut -d'"' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Decode Keystore
+      # Release builds only when signing secrets are configured, otherwise a
+      # debug APK (still installable, no keystore required) is produced.
+      - name: Choose build variant
+        id: variant
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > ${{ github.workspace }}/release-signing-key.jks
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "task=assembleRelease" >> "$GITHUB_OUTPUT"
+            echo "glob=app/build/outputs/apk/release/*.apk" >> "$GITHUB_OUTPUT"
+            echo "suffix=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "task=assembleDebug" >> "$GITHUB_OUTPUT"
+            echo "glob=app/build/outputs/apk/debug/*.apk" >> "$GITHUB_OUTPUT"
+            echo "suffix=debug" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Build Release APK
+      - name: Decode signing keystore
+        if: steps.variant.outputs.task == 'assembleRelease'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > "$GITHUB_WORKSPACE/release-signing-key.jks"
+
+      - name: Build
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/release-signing-key.jks
           STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          ./gradlew assembleRelease
+        run: ./gradlew ${{ steps.variant.outputs.task }} --stacktrace
 
-      - name: Rename Release APK
+      - name: Collect APK
+        id: apk
         run: |
-          mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/bluke-${{ steps.get_version.outputs.version }}.apk
+          mkdir -p dist
+          VERSION=$(grep -oE 'versionName\s*=\s*"[^"]+"' app/build.gradle.kts | cut -d'"' -f2)
+          APK=$(ls ${{ steps.variant.outputs.glob }} | head -n 1)
+          OUT="dist/bluke-free-${VERSION}-${{ steps.variant.outputs.suffix }}.apk"
+          cp "$APK" "$OUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+          echo "Built $OUT ($(du -h "$OUT" | cut -f1))"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: ${{ steps.apk.outputs.path }}
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    needs: [ build, lint ]
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: apk
+          path: dist
 
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/bluke-${{ steps.get_version.outputs.version }}.apk
+          files: dist/*.apk
           draft: false
           prerelease: false
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

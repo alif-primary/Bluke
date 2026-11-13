@@ -1,91 +1,127 @@
 <div align="center">
 
-<img src="Logo.svg" width="128" height="128" alt="Bluke Logo" />
+<img src="Logo.svg" width="120" alt="Bluke Free logo" />
 
-# Bluke
+# Bluke Free
 
-Bluke turns your Android phone into a Bluetooth keyboard, touchpad, gamepad, and multimedia remote without needing any host companion software.
+Use your Android phone as a Bluetooth keyboard, touchpad, gamepad and media remote —
+no companion app or server on the host side.
 
-[![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com)
-[![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg?style=for-the-badge)](LICENSE)
-[![Latest Release](https://img.shields.io/github/v/release/arnav-kr/Bluke?style=for-the-badge&color=orange)](https://github.com/arnav-kr/Bluke/releases)
+[![Build APK](https://github.com/alif-primary/Bluke/actions/workflows/build.yml/badge.svg)](https://github.com/alif-primary/Bluke/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/alif-primary/Bluke?color=orange)](https://github.com/alif-primary/Bluke/releases)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
 </div>
 
 ---
 
+## This is a fork
+
+**Bluke Free** is a rebranded community fork of
+[**Bluke**](https://github.com/arnav-kr/Bluke) by [arnav-kr](https://github.com/arnav-kr),
+distributed under the same **GNU AGPL-3.0** license. The upstream project is already free
+software; this fork exists to ship an independently built APK under its own application ID so
+it can be installed next to (or instead of) upstream, and to document a fully automated,
+self-hosted build.
+
+Modifications relative to upstream (`v1.1.0`):
+
+| Change | Where |
+| --- | --- |
+| Application ID `dev.arnv.bluke` → `io.github.alifprimary.blukefree` (installs side-by-side) | `app/build.gradle.kts` |
+| Display name and Bluetooth HID device name → `Bluke Free` | `strings.xml`, `BluetoothKeyboardManager.kt` |
+| About screen links and "Free software fork" notice point at this repo | `AboutActivity.kt` |
+| CI rewritten: debug-or-signed build, artifact upload, tag → GitHub Release | `.github/workflows/build.yml` |
+
+Everything else — HID descriptors, layouts, themes, sound packs — is upstream work. Per AGPL-3.0
+§5, the complete corresponding source of this fork is this repository.
+
+## Download
+
+Grab `bluke-free-<version>-debug.apk` (or `-release.apk` when signed) from the
+[**Releases**](https://github.com/alif-primary/Bluke/releases) page, or from the latest
+[Actions run](https://github.com/alif-primary/Bluke/actions/workflows/build.yml) artifacts.
+Sideload it — the Play Store is not involved.
+
 ## Features
 
-- Direct Bluetooth HID connection with no companion apps or server software running on the host
-- Four input modes: Keyboard, Touchpad, Gamepad, and Multimedia remote
-- 12 mechanical switch sound profiles, plus support for importing custom Mechvibes sound packs
-- Multiple typing layouts (QWERTY, AZERTY, QWERTZ, Dvorak, Colemak, Russian ЙЦУКЕН) with `Shift + Space` cycling
-- Multiple keyboard geometries (60%, 65%, 75%) and custom themes with case, plate, and keycap styling
-- Gamepad controller with live switching between Native, Android, and Web mappings
-- Multimedia remote with presentation controls, touchpad, and phone volume button forwarding
-- Built for peak UX with haptic feedback, OLED black mode, and Material You dynamic theming
+- Direct Bluetooth HID connection — no host-side software, works with Windows, Linux, Android, ChromeOS
+- Four input modes: **Keyboard**, **Touchpad**, **Gamepad**, **Multimedia remote**
+- Mechanical switch sound profiles (12 built-in) plus importable Mechvibes sound packs
+- Layouts: QWERTY, AZERTY, QWERTZ, Dvorak, Colemak, Russian ЙЦУКЕН (`Shift + Space` to cycle)
+- 60% / 65% / 75% keyboard geometries, custom themes, Material You theming, OLED black, haptics
 
-
-[Usage & troubleshooting guide](docs/USAGE.md) · [Changelog](CHANGELOG.md)
+Usage and troubleshooting: [docs/USAGE.md](docs/USAGE.md).
 
 ## Requirements
 
-- **Android 9 (API level 28) or higher** with firmware supporting the Bluetooth HID Device profile. Profile availability depends on device chipset and OEM ROM.
-- A compatible Bluetooth host (Windows, Linux, Android, ChromeOS). Apple and macOS devices are currently unsupported / future scope.
+- **Android 9 (API 28) or newer** with firmware that exposes the **Bluetooth HID Device profile**.
+  This is a firmware capability, not something an app can add — if your ROM lacks it, no HID app
+  will work on that device.
+- A host that accepts generic Bluetooth HID: Windows, Linux, Android/Android TV, ChromeOS.
+  Apple/macOS hosts are not supported upstream.
 
-## Build and Installation
+## Build
 
-### Prerequisites
+### On a PC (one command)
 
-- Android Studio / JDK compatible with the project's Android Gradle Plugin.
-- Android SDK 36.1, as configured in `app/build.gradle.kts`.
-- The included Gradle Wrapper.
+Windows:
 
-### Setup and Compilation
+```powershell
+.\scripts\setup.ps1              # installs JDK 17 + Android SDK, then builds
+.\scripts\build.ps1 -Install     # rebuild + install over USB
+```
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/arnav-kr/Bluke.git
-   cd Bluke
-   ```
+Linux / macOS:
 
-2. **Build with Gradle**:
-   ```bash
-   ./gradlew assembleDebug      # Linux / macOS
-   .\gradlew.bat assembleDebug  # Windows PowerShell
-   ```
+```bash
+./scripts/setup.sh               # installs JDK 17 + Android SDK, then builds
+./scripts/build.sh --install     # rebuild + install over USB
+```
 
-3. **Install on device**:
-   Enable USB Debugging on your Android phone and run:
-   ```bash
-   ./gradlew installDebug
-   ```
+The SDK is installed into user space (`%LOCALAPPDATA%\Android\Sdk`, `~/Android/Sdk`)
+and `local.properties` is written for you. Full details and troubleshooting:
+[docs/PC-SETUP.md](docs/PC-SETUP.md).
 
-The debug APK is output to `app/build/outputs/apk/debug/app-debug.apk`.
+Already have Android Studio and an SDK? Skip the setup script:
 
-## Star History
+```bash
+./gradlew assembleDebug      # app/build/outputs/apk/debug/app-debug.apk
+./gradlew installDebug       # to a USB-connected device
+```
 
-<a href="https://www.star-history.com/?repos=arnav-kr%2FBluke&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=arnav-kr/Bluke&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=arnav-kr/Bluke&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=arnav-kr/Bluke&type=date&legend=top-left" />
- </picture>
-</a>
+### CI build
+
+`.github/workflows/build.yml` runs on every push to `main`, every PR, and on `v*` tags:
+
+- builds `assembleDebug` by default and uploads the APK as the `apk` artifact;
+- builds `assembleRelease` instead **if** signing secrets exist;
+- on a `v*` tag, attaches the APK to a GitHub Release.
+
+To enable signed release builds, add these repository secrets (`Settings → Secrets and variables → Actions`):
+
+| Secret | Contents |
+| --- | --- |
+| `KEYSTORE_BASE64` | `base64 -w0 my-upload-key.jks` |
+| `KEYSTORE_PASSWORD` | keystore password |
+| `KEY_ALIAS` | key alias (upstream default: `k0`) |
+| `KEY_PASSWORD` | key password |
+
+Creating the keystore (one-off, on any machine with a JDK):
+
+```bash
+keytool -genkeypair -v -keystore my-upload-key.jks -alias k0 \
+  -keyalg RSA -keysize 4096 -validity 10000
+base64 -w0 my-upload-key.jks | gh secret set KEYSTORE_BASE64 -R alif-primary/Bluke
+```
 
 ## License
 
-This project is licensed under the [AGPL-3.0](LICENSE).
+[GNU Affero General Public License v3.0](LICENSE). Original work © the Bluke contributors;
+modifications in this fork are released under the same license.
 
 ## Credits
 
-* **[kbsim](https://github.com/tplai/kbsim)**: Part of mechanical switch audio assets are sourced from [kbs.im](https://kbs.im).
-
-## Contributors
-
-<a href="https://github.com/arnav-kr/Bluke/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=arnav-kr/Bluke" alt="Bluke Contributors" />
-</a>
-
- See the [full contributor graph](https://github.com/arnav-kr/Bluke/graphs/contributors).
+- [arnav-kr/Bluke](https://github.com/arnav-kr/Bluke) — upstream project
+- [kbs.im](https://kbs.im) / [kbsim](https://github.com/tplai/kbsim) — mechanical switch audio assets
+- [Atharok/BtRemote](https://gitlab.com/Atharok/BtRemote) — lineage of the serverless HID approach
