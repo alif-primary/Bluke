@@ -138,6 +138,13 @@ class AboutActivity : ComponentActivity() {
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
 
+                        Text(
+                            text = "Free software fork of Bluke · AGPL-3.0",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
                         // Staged chips below version number
                         Row(
                             horizontalArrangement = Arrangement.Center,
@@ -146,7 +153,7 @@ class AboutActivity : ComponentActivity() {
                         ) {
                             // GitHub Repository Link Chip
                             Surface(
-                                onClick = { openUrl("https://github.com/arnav-kr/Bluke") },
+                                onClick = { openUrl("https://github.com/alif-primary/Bluke") },
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -176,7 +183,7 @@ class AboutActivity : ComponentActivity() {
 
                             // Email Link Chip
                             Surface(
-                                onClick = { openUrl("mailto:bluke@arnv.dev") },
+                                onClick = { openUrl("https://github.com/alif-primary/Bluke/issues") },
                                 shape = CircleShape,
                                 color = MaterialTheme.colorScheme.primaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -188,13 +195,13 @@ class AboutActivity : ComponentActivity() {
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Email,
-                                        contentDescription = "Contact Email",
+                                        contentDescription = "Issues",
                                         modifier = Modifier.size(18.dp),
                                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "Email",
+                                        text = "Issues",
                                         fontWeight = FontWeight.Bold,
                                         style = MaterialTheme.typography.titleMedium,
                                         fontSize = 14.sp
@@ -288,7 +295,7 @@ class AboutActivity : ComponentActivity() {
                                     title = "Changelogs",
                                     subtitle = "History of all the changes made to the app",
                                     icon = { Icon(Icons.Default.History, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = { openUrl("https://github.com/arnav-kr/Bluke/releases") }
+                                    onClick = { openUrl("https://github.com/alif-primary/Bluke/releases") }
                                 ),
                                 SettingsItemData(
                                     title = "Licenses",
@@ -300,13 +307,13 @@ class AboutActivity : ComponentActivity() {
                                     title = "Report issue",
                                     subtitle = "Report any issue or bug you have encountered while using the app",
                                     icon = { Icon(Icons.Default.BugReport, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = { openUrl("https://github.com/arnav-kr/Bluke/issues/new?template=bug_report.md") }
+                                    onClick = { openUrl("https://github.com/alif-primary/Bluke/issues/new?template=bug_report.md") }
                                 ),
                                 SettingsItemData(
                                     title = "Feature request",
                                     subtitle = "If you have any ideas or suggestions for the app, let us know",
                                     icon = { Icon(Icons.Default.Lightbulb, null, tint = MaterialTheme.colorScheme.primary) },
-                                    onClick = { openUrl("https://github.com/arnav-kr/Bluke/issues/new?template=feature_request.md") }
+                                    onClick = { openUrl("https://github.com/alif-primary/Bluke/issues/new?template=feature_request.md") }
                                 )
                             )
                         )

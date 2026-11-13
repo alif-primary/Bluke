@@ -293,9 +293,9 @@ class BluetoothKeyboardManager(private val context: Context) {
     private fun sdpSettings(mode: GamepadDpadOutputMode): BluetoothHidDeviceAppSdpSettings? {
         return try {
             BluetoothHidDeviceAppSdpSettings(
-                "Bluke",                         // Name
+                "Bluke Free",                    // Name
                 "Wireless Controller Combo",    // Description
-                "Bluke",                         // Provider
+                "Bluke Free",                    // Provider
                 BluetoothHidDevice.SUBCLASS1_COMBO, // Subclass
                 hidDescriptorForMode(mode)       // One descriptor for every report mapping
             )
