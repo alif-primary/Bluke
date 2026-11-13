@@ -38,13 +38,14 @@ function Step([string]$text) {
 function Info([string]$text) { Write-Host "    $text" -ForegroundColor DarkGray }
 
 function Invoke-Native {
-    <# Native tools write to stderr; merging that under EAP=Stop throws
+    <# Streams native output to the host and returns only the exit code.
+       Native tools write to stderr; merging that under EAP=Stop throws
        NativeCommandError, so relax the preference for the call itself. #>
     param([Parameter(Mandatory)][string]$FilePath, [string[]]$ArgumentList = @())
     $old = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        & $FilePath @ArgumentList
+        & $FilePath @ArgumentList 2>&1 | ForEach-Object { Write-Host "$_" }
         return $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $old
