@@ -14,31 +14,28 @@ permissions:
 
 jobs:
   fresh-sdk:
-    name: setup (${{ matrix.shell }})
+    name: setup (${{ matrix.exe }})
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        # powershell = Windows PowerShell 5.1 (the default on end-user machines)
+        # powershell = Windows PowerShell 5.1 (what end-user machines default to)
         # pwsh       = PowerShell 7
-        shell: [powershell, pwsh]
+        exe: [powershell, pwsh]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
       - name: Show environment
-        shell: ${{ matrix.shell }}
+        shell: cmd
         run: |
-          $PSVersionTable.PSVersion | Out-String | Write-Host
-          Write-Host "JAVA_HOME=$env:JAVA_HOME"
-          (Get-Command java -ErrorAction SilentlyContinue).Source
-          java -version 2>&1 | Write-Host
+          ${{ matrix.exe }} -NoProfile -Command "$PSVersionTable.PSVersion.ToString(); 'JAVA_HOME=' + $env:JAVA_HOME; (Get-Command java -ErrorAction SilentlyContinue).Source; java -version 2>&1 | Out-String"
 
       - name: Run setup.ps1 against an empty SDK root
-        shell: ${{ matrix.shell }}
-        run: .\scripts\setup.ps1 -SdkRoot "$env:RUNNER_TEMP\AndroidSdk" -NoBuild
+        shell: cmd
+        run: ${{ matrix.exe }} -NoProfile -ExecutionPolicy Bypass -File scripts\setup.ps1 -SdkRoot "%RUNNER_TEMP%\AndroidSdk" -NoBuild
 
       - name: Build with the freshly installed SDK
-        shell: ${{ matrix.shell }}
-        run: .\scripts\build.ps1
+        shell: cmd
+        run: ${{ matrix.exe }} -NoProfile -ExecutionPolicy Bypass -File scripts\build.ps1
